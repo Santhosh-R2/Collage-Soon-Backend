@@ -18,9 +18,9 @@ exports.getTeachers = async (req, res) => {
 // Student Selects Teacher
 exports.selectTeacher = async (req, res) => {
   const { studentId, teacherId } = req.body;
-  await User.findByIdAndUpdate(studentId, { 
-    classTeacherId: teacherId, 
-    teacherRequestStatus: 'pending' 
+  await User.findByIdAndUpdate(studentId, {
+    classTeacherId: teacherId,
+    teacherRequestStatus: 'pending'
   });
   res.status(200).json({ message: "Request Sent to Teacher" });
 };
@@ -40,29 +40,29 @@ exports.handleStudentRequest = async (req, res) => {
       // ===========================
       // CASE A: ACCEPTED
       // ===========================
-      
+
       // 1. Update Student: Approve them
-      await User.findByIdAndUpdate(studentId, { 
+      await User.findByIdAndUpdate(studentId, {
         teacherRequestStatus: 'accepted',
-        isApproved: true 
+        isApproved: true
       });
 
       // 2. Update Teacher: Add Student ID to array
       await User.findByIdAndUpdate(teacherId, {
-        $addToSet: { assignedStudents: studentId } 
+        $addToSet: { assignedStudents: studentId }
       });
 
     } else {
       // ===========================
       // CASE B: REJECTED
       // ===========================
-      
+
       // Update Student: Mark rejected AND remove the classTeacherId
-      await User.findByIdAndUpdate(studentId, { 
+      await User.findByIdAndUpdate(studentId, {
         teacherRequestStatus: 'rejected',
-        
+
         // $unset removes the field entirely from the database
-        $unset: { classTeacherId: "" } 
+        $unset: { classTeacherId: "" }
       });
     }
 
@@ -76,7 +76,7 @@ exports.handleStudentRequest = async (req, res) => {
 // Teacher Broadcast to Class
 exports.classBroadcast = async (req, res) => {
   const { teacherId, title, message } = req.body;
-  
+
   // Send Socket
   const io = req.app.get('socketio');
   io.to(`class-${teacherId}`).emit('broadcast-alert', { title, message, from: "Teacher" });
@@ -97,7 +97,7 @@ exports.getStudentRequests = async (req, res) => {
     // 3. Have selected THIS teacher
     const students = await User.find({
       role: 'student',
-      isApproved: false, 
+      isApproved: false,
       classTeacherId: teacherId
     });
 
@@ -117,7 +117,7 @@ exports.getMyClassList = async (req, res) => {
 
     // Find teacher and populate the student details
     const teacher = await User.findById(teacherId).populate('assignedStudents', 'name email homeLocation campusAttendance');
-    
+
     if (!teacher) {
       return res.status(404).json({ message: "Teacher not found" });
     }
@@ -131,14 +131,14 @@ exports.getMyClassList = async (req, res) => {
 exports.createExamSchedule = async (req, res) => {
   try {
     const { teacherId, semester, exams } = req.body;
-    
+
     await ExamSchedule.findOneAndUpdate(
       { teacherId, semester }, { exams }, { upsert: true }
     );
 
     // Get Teacher Name for Email
     const teacher = await User.findById(teacherId);
-    
+
     // Send Email
     const emails = await getStudentEmails(teacherId);
     await emailService.sendTimetableEmail(emails, teacher.name, semester);
@@ -155,7 +155,7 @@ exports.getExamSchedule = async (req, res) => {
   try {
     // Accept either teacherId OR studentId
     const { teacherId, studentId, semester } = req.query;
-    
+
     let targetTeacherId = teacherId;
 
     // IF studentId is sent, find their Class Teacher automatically
@@ -172,12 +172,12 @@ exports.getExamSchedule = async (req, res) => {
     }
 
     // Now find the schedule belonging to that Teacher
-    const schedule = await ExamSchedule.findOne({ 
-      teacherId: targetTeacherId, 
-      semester: semester 
+    const schedule = await ExamSchedule.findOne({
+      teacherId: targetTeacherId,
+      semester: semester
     });
-    
-    if(!schedule) return res.status(404).json({ message: "No schedule found for this semester" });
+
+    if (!schedule) return res.status(404).json({ message: "No schedule found for this semester" });
 
     res.status(200).json(schedule);
   } catch (error) {
@@ -213,7 +213,9 @@ exports.addStudentMarks = async (req, res) => {
 // Student: View My Marks
 exports.getMyMarks = async (req, res) => {
   try {
-    const { studentId } = req.body;
+    const studentId = req.query.studentId || req.body.studentId;
+    if (!studentId) return res.status(400).json({ message: "Student ID required" });
+
     const results = await StudentResult.find({ studentId });
     res.status(200).json(results);
   } catch (error) {
