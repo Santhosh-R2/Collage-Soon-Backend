@@ -11,8 +11,17 @@ const getStudentEmails = async (teacherId) => {
 };
 // Get All Teachers
 exports.getTeachers = async (req, res) => {
-  const teachers = await User.find({ role: 'teacher', isApproved: true });
-  res.status(200).json(teachers);
+  try {
+    const teachers = await User.find({ role: 'teacher', isApproved: true })
+      .populate({
+        path: 'assignedStudents',
+        select: '-password' // Fetches all student fields EXCEPT the password
+      });
+
+    res.status(200).json(teachers);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 };
 
 // Student Selects Teacher

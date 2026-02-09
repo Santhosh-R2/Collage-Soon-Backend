@@ -61,7 +61,7 @@ router.post('/teacher/handle-request', acadCtrl.handleStudentRequest);
 
 
 router.get('/view/students', (req, res) => {
-    req.params.role = 'student'; // Manually set role
+    req.params.role = 'student'; 
     authCtrl.getUsersByRole(req, res);
 });
 
