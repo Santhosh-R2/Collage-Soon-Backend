@@ -70,7 +70,21 @@ exports.approveUser = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+exports.rejectUser = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    
+    const deletedUser = await User.findByIdAndDelete(userId);
+    
+    if (!deletedUser) {
+      return res.status(404).json({ message: "User not found." });
+    }
 
+    res.status(200).json({ message: "User request rejected and account deleted." });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 // Admin: Get Pending List
 exports.getPendingUsers = async (req, res) => {
   try {
