@@ -35,37 +35,53 @@ exports.sendBroadcast = async (req, res) => {
   try {
     const { senderId, title, message, targetAudience } = req.body;
 
-    // 1. Save to DB
-    await Broadcast.create({ senderId, title, message, targetAudience });
+    // 1. Validation check
+    if (!title || !message || !targetAudience) {
+      return res.status(400).json({ message: "Title, Message, and Audience are required." });
+    }
 
-    // 2. Fetch Email Recipients
-    let query = {};
+    // 2. Save to Database
+    await Broadcast.create({ 
+      senderId: senderId || "000000000000000000000000", 
+      title, 
+      message, 
+      targetAudience 
+    });
+
+    // 3. Fetch Email Recipients (Only Approved Users)
+    let query = { isApproved: true }; // Only send to verified users
     if (targetAudience !== 'all') {
-      // Map audience to role (student, teacher, driver, non-faculty)
       query.role = targetAudience;
     }
     
-    // Get emails only
     const users = await User.find(query).select('email');
-    const emailList = users.map(u => u.email).filter(e => e); // Remove nulls
+    const emailList = users.map(u => u.email).filter(e => e);
 
-    // 3. Send Emails
+    // 4. Send Emails (FIRE AND FORGET - Don't 'await' this to prevent frontend timeout)
     if (emailList.length > 0) {
-      // Using bcc in logic (or loop) - Here passing array to 'to'
-      // For privacy in production, use 'bcc', but for now 'to' works
-      await emailService.sendBroadcastEmail(emailList, title, message);
+        emailService.sendBroadcastEmail(emailList, title, message)
+            .then(() => console.log(`Emails sent to ${emailList.length} users`))
+            .catch(err => console.error("Background Email Error:", err));
     }
 
-    // 4. Socket Emit (Existing logic)
+    // 5. Socket Emit
     const io = req.app.get('socketio');
+    const socketPayload = { title, message, from: 'Admin', date: new Date() };
+
     if (targetAudience === 'all') {
-      io.emit('broadcast-alert', { title, message, from: 'Admin' });
+      io.emit('broadcast-alert', socketPayload);
     } else {
-      io.to(`role-${targetAudience}`).emit('broadcast-alert', { title, message, from: 'Admin' });
+      io.to(`role-${targetAudience}`).emit('broadcast-alert', socketPayload);
     }
 
-    res.status(200).json({ message: `Broadcast sent to ${emailList.length} users via Email & App` });
+    // 6. Respond immediately
+    res.status(200).json({ 
+      message: `Broadcast initiated for ${emailList.length} users.`,
+      count: emailList.length 
+    });
+
   } catch (error) {
+    console.error("Broadcast Error:", error);
     res.status(500).json({ error: error.message });
   }
 };
