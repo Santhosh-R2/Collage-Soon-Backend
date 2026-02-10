@@ -6,6 +6,7 @@
     "mongoose": "^9.1.5",
     "node-cron": "^4.2.1",
     "nodemailer": "^7.0.13",
+    "resend": "^6.9.1",
     "socket.io": "^4.8.3"
   }
 }
