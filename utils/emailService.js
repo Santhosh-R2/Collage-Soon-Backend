@@ -14,9 +14,10 @@ const transporter = nodemailer.createTransport({
     // Automatically removes spaces from your App Password string
     pass: process.env.EMAIL_PASS ? process.env.EMAIL_PASS.replace(/\s+/g, '') : ""
   },
-  connectionTimeout: 20000,
-  greetingTimeout: 20000,
-  socketTimeout: 30000,
+  // Increased timeouts for Render (Free Tier can be slow)
+  connectionTimeout: 60000, // 60 seconds
+  greetingTimeout: 30000,   // 30 seconds
+  socketTimeout: 60000,     // 60 seconds
   tls: {
     // Helps with handshake issues in cloud environments
     rejectUnauthorized: false,
