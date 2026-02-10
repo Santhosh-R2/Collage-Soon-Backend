@@ -21,22 +21,39 @@ const getHtmlTemplate = (title, bodyContent, isUrgent = false) => {
   `;
 };
 
+
 const sendEmail = async (toEmails, subject, htmlContent) => {
   try {
-    // Resend handles arrays of emails automatically
-    const recipients = Array.isArray(toEmails) ? toEmails : [toEmails];
+    // 1. Ensure we have an array
+    let recipients = Array.isArray(toEmails) ? toEmails : [toEmails];
 
-    if (recipients.length === 0) return;
+    // 2. CRITICAL: Clean the data
+    // Remove nulls, undefined, empty strings, and ensure they are strings with '@'
+    recipients = recipients.filter(email => 
+      email && 
+      typeof email === 'string' && 
+      email.trim() !== '' && 
+      email.includes('@')
+    );
 
+    // 3. If after cleaning no emails are left, stop
+    if (recipients.length === 0) {
+      console.log("⚠️ No valid email addresses found to send to.");
+      return;
+    }
+
+    // 4. Send using Resend
     const { data, error } = await resend.emails.send({
-      from: 'Campus Soon <onboarding@resend.dev>', // While testing, use this default 'from'
+      from: 'Campus Soon <onboarding@resend.dev>',
       to: recipients,
       subject: subject,
       html: htmlContent,
     });
 
     if (error) {
-      return console.error("❌ RESEND API ERROR:", error);
+      // Log the specific error from Resend
+      console.error("❌ RESEND API ERROR:", error);
+      return;
     }
 
     console.log(`📧 API SUCCESS: Email sent to ${recipients.length} users. ID: ${data.id}`);
@@ -44,6 +61,7 @@ const sendEmail = async (toEmails, subject, htmlContent) => {
     console.error("❌ GLOBAL EMAIL ERROR:", err.message);
   }
 };
+
 
 module.exports = {
   sendBroadcastEmail: async (emails, title, message) => {
