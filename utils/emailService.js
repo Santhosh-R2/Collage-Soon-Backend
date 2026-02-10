@@ -30,7 +30,7 @@ transporter.verify((error, success) => {
   if (error) {
     console.log("❌ Render Mail Server Error:", error.message);
   } else {
-    console.log("✅ Render Mail Server is Ready (Campus Soon)");
+    console.log("✅ Render Mail Server is Ready (Campus Zone)");
   }
 });
 
@@ -41,14 +41,14 @@ const getHtmlTemplate = (title, bodyContent, isUrgent = false) => {
   return `
     <div style="font-family: 'Segoe UI', Tahoma, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
       <div style="background-color: ${headerColor}; padding: 30px; text-align: center; color: white;">
-        <h1 style="margin: 0; font-size: 26px; letter-spacing: 1px;">Campus Soon</h1>
+        <h1 style="margin: 0; font-size: 26px; letter-spacing: 1px;">Campus Zone</h1>
         <p style="margin: 5px 0 0; font-size: 14px; opacity: 0.9;">${title}</p>
       </div>
       <div style="padding: 30px; background-color: #ffffff; color: #333333; line-height: 1.6; font-size: 15px;">
         ${bodyContent}
       </div>
       <div style="background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #888888; border-top: 1px solid #eeeeee;">
-        <p style="margin-bottom: 5px;"><strong>Campus Soon Digital Ecosystem</strong></p>
+        <p style="margin-bottom: 5px;"><strong>Campus Zone Digital Ecosystem</strong></p>
         <p style="margin-top: 0;">This is an automated notification. Please do not reply.</p>
       </div>
     </div>
@@ -61,7 +61,7 @@ const sendEmail = async (toEmails, subject, htmlContent) => {
 
   // We use BCC for broadcasts. It's more private and efficient for Gmail.
   const mailOptions = {
-    from: `"Campus Soon Admin" <${process.env.EMAIL_USER}>`,
+    from: `"Campus Zone Admin" <${process.env.EMAIL_USER}>`,
     to: process.env.EMAIL_USER, // Send to yourself
     bcc: Array.isArray(toEmails) ? toEmails.join(', ') : toEmails, // BCC everyone else
     subject: subject,
@@ -99,7 +99,7 @@ module.exports = {
     const html = getHtmlTemplate('Exam Timetable Published', `
       <p><strong>Academic Advisor:</strong> ${teacherName}</p>
       <p>The examination schedule for <strong>${semester}</strong> has been officially released.</p>
-      <p>Please login to the <strong>Campus Soon</strong> app to view specific dates, hall timings, and subjects.</p>
+      <p>Please login to the <strong>Campus Zone</strong> app to view specific dates, hall timings, and subjects.</p>
     `);
     await sendEmail(emails, `📅 Exam Schedule: ${semester}`, html);
   },
