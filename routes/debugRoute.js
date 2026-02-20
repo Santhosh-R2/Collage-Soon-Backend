@@ -2,43 +2,72 @@ const express = require('express');
 const router = express.Router();
 const nodemailer = require('nodemailer');
 
+// GET /api/debug-env
+// Checks environment variables and connections
 router.get('/debug-env', async (req, res) => {
-    try {
-        const userSet = !!process.env.EMAIL_USER;
-        const passSet = !!process.env.EMAIL_PASS;
-
-        let connectionStatus = 'Skipped';
-        let errorDetails = null;
-
-        if (userSet && passSet) {
-            const transporter = nodemailer.createTransport({
-                service: 'gmail',
-                auth: {
-                    user: process.env.EMAIL_USER,
-                    pass: process.env.EMAIL_PASS,
-                },
-            });
-            try {
-                await transporter.verify();
-                connectionStatus = 'Success';
-            } catch (err) {
-                connectionStatus = 'Failed';
-                errorDetails = err.message;
-            }
+    const debugInfo = {
+        environment: {
+            EMAIL_USER_CONFIGURED: !!process.env.EMAIL_USER,
+            EMAIL_PASS_CONFIGURED: !!process.env.EMAIL_PASS,
+            NODE_ENV: process.env.NODE_ENV,
+        },
+        smtpTest: {
+            attempted: false,
+            success: false,
+            error: null,
+            logs: []
         }
+    };
 
-        res.json({
-            status: 'Debug Info',
-            environment: {
-                EMAIL_USER_SET: userSet,
-                EMAIL_PASS_SET: passSet,
-                NODE_ENV: process.env.NODE_ENV
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+        debugInfo.environment.error = "Missing EMAIL_USER or EMAIL_PASS environment variables.";
+        return res.status(500).json(debugInfo);
+    }
+
+    try {
+        debugInfo.smtpTest.attempted = true;
+
+        // 1. Create Transporter with explicit settings
+        const transporter = nodemailer.createTransport({
+            host: 'smtp.gmail.com',
+            port: 465,
+            secure: true,
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
             },
-            smtpConnection: connectionStatus,
-            error: errorDetails
+            logger: true, // Log to console
+            debug: true   // Include debug info
         });
+
+        // 2. Verify Connection
+        await transporter.verify();
+        debugInfo.smtpTest.connectionVerified = true;
+
+        // 3. Try sending a self-email
+        const info = await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: process.env.EMAIL_USER, // Send to self
+            subject: 'Vercel Debug Test',
+            text: 'If you received this, Vercel email sending is WORKING.'
+        });
+
+        debugInfo.smtpTest.success = true;
+        debugInfo.smtpTest.messageId = info.messageId;
+        debugInfo.smtpTest.response = info.response;
+
+        res.json(debugInfo);
+
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error("Debug Route Error:", error);
+        debugInfo.smtpTest.error = {
+            message: error.message,
+            code: error.code,
+            command: error.command,
+            response: error.response,
+            responseCode: error.responseCode
+        };
+        res.status(500).json(debugInfo);
     }
 });
 

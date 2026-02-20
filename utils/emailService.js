@@ -1,14 +1,15 @@
 const nodemailer = require('nodemailer');
 
 // Create a generic transporter
-// For Gmail: service: 'gmail'
-// For others: host, port, secure
+// Using explicit settings for better reliability on Vercel
 const createTransporter = () => {
   return nodemailer.createTransport({
-    service: 'gmail', // Standard for many users, fallback to host/port if needed in future
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true, // Use SSL
     auth: {
       user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS, // App Password for Gmail
+      pass: process.env.EMAIL_PASS,
     },
   });
 };
