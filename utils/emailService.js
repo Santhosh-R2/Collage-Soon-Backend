@@ -4,13 +4,13 @@ const nodemailer = require('nodemailer');
 // For Gmail: service: 'gmail'
 // For others: host, port, secure
 const createTransporter = () => {
-    return nodemailer.createTransport({
-        service: 'gmail', // Standard for many users, fallback to host/port if needed in future
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS, // App Password for Gmail
-        },
-    });
+  return nodemailer.createTransport({
+    service: 'gmail', // Standard for many users, fallback to host/port if needed in future
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS, // App Password for Gmail
+    },
+  });
 };
 
 /* 
@@ -37,15 +37,18 @@ const getHtmlTemplate = (title, bodyContent, isUrgent = false) => {
 };
 
 /*
- * 2. Optimized Send Function via Nodemailer
+ * 2. Optimized Send Function via Nodemailer (Serverless Friendly)
  */
 const sendEmail = async (toEmails, subject, htmlContent) => {
   if (!toEmails || (Array.isArray(toEmails) && toEmails.length === 0)) {
-      console.warn("⚠️ Email skipped: No recipients provided.");
-      return;
+    console.warn("⚠️ Email skipped: No recipients provided.");
+    return;
   }
 
   const recipients = Array.isArray(toEmails) ? toEmails.join(', ') : toEmails;
+
+  // Create transporter per request to ensure fresh connection in serverless environment
+  // This avoids timeout issues with stale connections in Vercel functions
   const transporter = createTransporter();
 
   const mailOptions = {
@@ -61,24 +64,9 @@ const sendEmail = async (toEmails, subject, htmlContent) => {
     return info;
   } catch (error) {
     console.error("❌ Error sending email:", error);
-    throw error; // Re-throw to be handled by caller if needed
+    throw error;
   }
 };
-
-// Verify connection configuration
-const verifyConnection = async () => {
-    const transporter = createTransporter();
-    try {
-        await transporter.verify();
-        console.log('✅ SMTP Connection established successfully.');
-        return true;
-    } catch (error) {
-        console.error('❌ SMTP Connection failed:', error);
-        return false;
-    }
-};
-
-verifyConnection(); // Check connection on server start
 
 module.exports = {
   // A. Admin Broadcast
@@ -123,7 +111,7 @@ module.exports = {
     `, true);
     await sendEmail(emails, `🚨 URGENT: Emergency SOS on Bus`, html);
   },
-  
+
   // Expose internal helper for generic usage if needed
-  sendGenericEmail: sendEmail 
+  sendGenericEmail: sendEmail
 };

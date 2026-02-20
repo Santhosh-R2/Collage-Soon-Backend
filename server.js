@@ -30,6 +30,7 @@ app.set('socketio', io);
 // Mount API Routes
 app.use('/api', apiRoutes);
 app.use('/api', require('./routes/testEmailRoute')); // Test Route
+app.use('/api', require('./routes/debugRoute')); // Debug Route
 
 // ============================================
 // 🔌 REAL-TIME SOCKET ENGINE
