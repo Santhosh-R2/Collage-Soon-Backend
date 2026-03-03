@@ -56,6 +56,8 @@ exports.sendBroadcast = async (req, res) => {
 
     const users = await User.find(query).select('email');
     const emailList = users.map(u => u.email).filter(e => e);
+console.log(emailList);
+console.log(users);
 
     // 3. Email Sending (UPDATED: Added 'await')
     // In Vercel, we MUST wait for this to finish, or the connection is cut.
