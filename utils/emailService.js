@@ -2,23 +2,21 @@ const nodemailer = require('nodemailer');
 
 const createTransporter = () => {
   return nodemailer.createTransport({
-    service: 'gmail', // Automatically sets host to smtp.gmail.com and port 465
+    service: 'gmail', 
     auth: {
       user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS, // Make sure this is an App Password, not login password
+      pass: process.env.EMAIL_PASS, 
     },
-    // Serverless optimizations
-    pool: false, // Don't pool connections (bad for serverless)
+    pool: false, 
     maxConnections: 1,
     secure: true,
     tls: {
       rejectUnauthorized: true,
       minVersion: 'TLSv1.2'
     },
-    // Timeouts to prevent Vercel freezing
-    connectionTimeout: 10000, // 10 seconds
-    greetingTimeout: 15000,    // Increased greeting timeout
-    socketTimeout: 15000,     // Increased socket timeout
+    connectionTimeout: 10000, 
+    greetingTimeout: 15000,    
+    socketTimeout: 15000,     
   });
 };
 
@@ -49,7 +47,6 @@ const sendEmail = async (toEmails, subject, htmlContent) => {
 
   const transporter = createTransporter();
 
-  // For broadcast (multiple recipients), use BCC to protect privacy and improve delivery
   const isMultiple = Array.isArray(toEmails) && toEmails.length > 1;
   const mailOptions = {
     from: `"Campus Zone" <${process.env.EMAIL_USER}>`,
@@ -58,14 +55,13 @@ const sendEmail = async (toEmails, subject, htmlContent) => {
   };
 
   if (isMultiple) {
-    mailOptions.to = process.env.EMAIL_USER; // Send to self
-    mailOptions.bcc = toEmails; // All others in BCC
+    mailOptions.to = process.env.EMAIL_USER; 
+    mailOptions.bcc = toEmails; 
   } else {
     mailOptions.to = Array.isArray(toEmails) ? toEmails[0] : toEmails;
   }
 
   try {
-    // Verify connection before sending
     await transporter.verify();
 
     const info = await transporter.sendMail(mailOptions);

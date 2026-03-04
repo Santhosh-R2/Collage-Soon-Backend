@@ -286,13 +286,20 @@ exports.getLiveLocation = async (req, res) => {
   try {
     const { driverId } = req.query;
 
-    const liveData = await LiveBusLocation.findOne({ driverId });
-
-    if (!liveData) {
-      return res.status(404).json({ status: 'OFFLINE', message: "Bus is not running currently." });
+    if (driverId) {
+      const liveData = await LiveBusLocation.findOne({ driverId });
+      if (!liveData) {
+        return res.status(404).json({ status: 'OFFLINE', message: "Bus is not running currently." });
+      }
+      return res.status(200).json({ status: 'ONLINE', data: liveData });
+    } else {
+      // If no driverId provided, fetch all active live locations
+      const allLiveData = await LiveBusLocation.find().populate('driverId', 'name email');
+      if (!allLiveData || allLiveData.length === 0) {
+        return res.status(200).json({ status: 'OFFLINE', message: "No buses are running currently.", data: [] });
+      }
+      return res.status(200).json({ status: 'ONLINE', count: allLiveData.length, data: allLiveData });
     }
-
-    res.status(200).json({ status: 'ONLINE', data: liveData });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

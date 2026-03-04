@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const Institute = require('../models/Institute');
 const Broadcast = require('../models/Broadcast');
+const SOSAlert = require('../models/SOSAlert');
 const emailService = require('../utils/emailService');
 // Set Institute Location
 exports.setInstituteLocation = async (req, res) => {
@@ -56,8 +57,8 @@ exports.sendBroadcast = async (req, res) => {
 
     const users = await User.find(query).select('email');
     const emailList = users.map(u => u.email).filter(e => e);
-console.log(emailList);
-console.log(users);
+    console.log(emailList);
+    console.log(users);
 
     // 3. Email Sending (UPDATED: Added 'await')
     // In Vercel, we MUST wait for this to finish, or the connection is cut.
@@ -109,6 +110,61 @@ exports.getInstituteByAdmin = async (req, res) => {
     }
 
     res.status(200).json(institute);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Get All Broadcasts (Admin Dashboard)
+exports.getAllBroadcasts = async (req, res) => {
+  try {
+    // 1. Fetch all general broadcasts (Admin & Teacher)
+    const broadcasts = await Broadcast.find()
+      .populate('senderId', 'name role')
+      .sort({ createdAt: -1 });
+
+    // 2. Fetch all SOS Alerts (Driver Broadcasts)
+    const sosAlerts = await SOSAlert.find()
+      .populate('driverId', 'name role')
+      .sort({ createdAt: -1 });
+
+    // 3. Format into a unified structure
+    const formattedBroadcasts = broadcasts.map(b => {
+      // If senderId is missing or unpopulated, default to admin
+      const role = b.senderId && b.senderId.role ? b.senderId.role.toLowerCase() : 'admin';
+      const name = b.senderId && b.senderId.name ? b.senderId.name : 'System Admin';
+
+      return {
+        _id: b._id,
+        type: 'General',
+        senderName: name,
+        senderRole: role, // 'admin' or 'teacher'
+        title: b.title,
+        message: b.message,
+        targetAudience: b.targetAudience,
+        createdAt: b.createdAt
+      };
+    });
+
+    const formattedSOS = sosAlerts.map(s => {
+      const name = s.driverId && s.driverId.name ? s.driverId.name : 'Unknown Driver';
+
+      return {
+        _id: s._id,
+        type: 'SOS',
+        senderName: name,
+        senderRole: 'driver',
+        title: `EMERGENCY SOS: ${s.reason}`,
+        message: `Driver triggered SOS at Location: Lat ${s.location?.lat}, Lng ${s.location?.lng}`,
+        targetAudience: 'admin', // SOS is usually for admins
+        createdAt: s.createdAt
+      };
+    });
+
+    // 4. Merge and sort by date descending
+    const allMessages = [...formattedBroadcasts, ...formattedSOS].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    res.status(200).json(allMessages);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

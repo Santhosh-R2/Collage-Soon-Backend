@@ -17,6 +17,7 @@ router.post('/admin/reject', authCtrl.rejectUser);
 router.post('/admin/set-location', adminCtrl.setInstituteLocation);
 router.get('/admin/institute/:adminId', adminCtrl.getInstituteByAdmin);
 router.post('/admin/broadcast', adminCtrl.sendBroadcast);
+router.get('/admin/broadcasts', adminCtrl.getAllBroadcasts);
 
 // --- ACADEMIC ---
 router.get('/teachers', acadCtrl.getTeachers);
@@ -63,7 +64,7 @@ router.post('/teacher/handle-request', acadCtrl.handleStudentRequest);
 
 
 router.get('/view/students', (req, res) => {
-    req.params.role = 'student'; 
+    req.params.role = 'student';
     authCtrl.getUsersByRole(req, res);
 });
 
