@@ -7,6 +7,8 @@ const acadCtrl = require('../controllers/academicController');
 const attendCtrl = require('../controllers/attendanceController');
 const busCtrl = require('../controllers/busController');
 
+const busCtrl = require('../controllers/busController');
+
 // --- AUTH & ADMIN ---
 router.post('/register', authCtrl.register);
 router.post('/login', authCtrl.login);
@@ -37,8 +39,9 @@ router.post('/academic/assignment', acadCtrl.createAssignment); // Teacher creat
 router.get('/academic/assignment', acadCtrl.getAssignments);    // Student views
 // --- CAMPUS ATTENDANCE ---
 router.post('/attendance/mark', attendCtrl.markAttendance);
-router.get('/attendance/history', attendCtrl.getAttendanceHistory)
+router.get('/attendance/history', attendCtrl.getAttendanceHistory);
 router.get('/attendance/live-class', attendCtrl.getLiveClassAttendance);
+router.get('/attendance/today/:role', attendCtrl.getTodayAttendanceByRole);
 // --- BUS MANAGEMENT (Updated) ---
 router.post('/bus/start-trip', busCtrl.startTrip);
 router.post('/bus/end-trip', busCtrl.endTrip);
@@ -85,5 +88,10 @@ router.get('/view/non-faculty', (req, res) => {
     req.params.role = 'non-faculty';
     authCtrl.getUsersByRole(req, res);
 });
+
+// --- ADMIN: LOG DELETION ---
+router.delete('/admin/broadcast/:id/:type', adminCtrl.deleteBroadcastLog);
+
+
 
 module.exports = router;

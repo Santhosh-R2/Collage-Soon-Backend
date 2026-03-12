@@ -169,3 +169,24 @@ exports.getAllBroadcasts = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// Delete Broadcast Log (General or SOS)
+exports.deleteBroadcastLog = async (req, res) => {
+  try {
+    const { id, type } = req.params;
+
+    if (type === 'General') {
+      await Broadcast.findByIdAndDelete(id);
+    } else if (type === 'SOS') {
+      await SOSAlert.findByIdAndDelete(id);
+    } else {
+      return res.status(400).json({ message: "Invalid log type" });
+    }
+
+    res.status(200).json({ message: "Log deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+module.exports = exports;

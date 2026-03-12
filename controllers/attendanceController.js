@@ -155,3 +155,34 @@ exports.getLiveClassAttendance = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+exports.getTodayAttendanceByRole = async (req, res) => {
+  try {
+    const { role } = req.params;
+    const today = new Date().toISOString().split('T')[0];
+
+    // Find all attendance records for today
+    const records = await AttendanceRecord.find({ 
+      date: today,
+      status: 'present'
+    }).populate({
+      path: 'userId',
+      match: { role: role },
+      select: 'name email role'
+    });
+
+    // Filter out records where userId didn't match the role (populate returns null for mismatch)
+    const presentUsers = records
+      .filter(r => r.userId !== null)
+      .map(r => ({
+        _id: r.userId._id,
+        name: r.userId.name,
+        email: r.userId.email,
+        checkInTime: r.checkInTime
+      }));
+
+    res.status(200).json(presentUsers);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
