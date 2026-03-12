@@ -7,8 +7,6 @@ const acadCtrl = require('../controllers/academicController');
 const attendCtrl = require('../controllers/attendanceController');
 const busCtrl = require('../controllers/busController');
 
-const busCtrl = require('../controllers/busController');
-
 // --- AUTH & ADMIN ---
 router.post('/register', authCtrl.register);
 router.post('/login', authCtrl.login);
