@@ -20,9 +20,10 @@ const userSchema = new mongoose.Schema({
   campusAttendance: {
     date: String,
     status: { type: String, enum: ['present', 'absent'], default: 'absent' }
-  }
+  },
 
   // ❌ REMOVED busStatus from here
+  busDriverId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 });
 
 module.exports = mongoose.model('User', userSchema);

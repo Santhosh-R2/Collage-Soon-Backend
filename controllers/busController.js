@@ -41,9 +41,9 @@ exports.initBus = async (req, res) => {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    res.status(200).json({ 
-      message: "Bus Profile saved/updated successfully", 
-      bus 
+    res.status(200).json({
+      message: "Bus Profile saved/updated successfully",
+      bus
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -54,7 +54,7 @@ exports.getBusByDriver = async (req, res) => {
     const { driverId } = req.query;
 
     const bus = await Bus.findOne({ driverId });
-    
+
     if (!bus) {
       return res.status(200).json({ busNumber: "" }); // Return empty if not found
     }
@@ -90,6 +90,8 @@ exports.addPassenger = async (req, res) => {
       { upsert: true }
     );
 
+    await User.findByIdAndUpdate(passengerId, { busDriverId: driverId });
+
     res.status(200).json({ message: "Passenger Added to Trip List" });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -105,6 +107,8 @@ exports.removePassenger = async (req, res) => {
       { driverId },
       { $pull: { passengers: passengerId } }
     );
+
+    await User.findByIdAndUpdate(passengerId, { $unset: { busDriverId: 1 } });
 
     res.status(200).json({ message: "Passenger Removed from Trip List" });
   } catch (error) {
