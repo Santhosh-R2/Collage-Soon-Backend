@@ -232,32 +232,67 @@ exports.getUserPrediction = async (req, res) => {
       return res.status(404).json({ message: "No active trip found for your route." });
     }
 
-    const userPred = activeTrip.predictions.find(p => p.userId.toString() === userId);
+    // 1. Get user's static prediction info first as fallback
+    let userPred = activeTrip.predictions.find(p => p.userId.toString() === userId);
+    let distanceMeters = userPred.distance;
+    let durationSeconds = userPred.duration;
+    let predictedArrivalTimeObj = new Date(userPred.predictedArrivalTime);
+
+    // 2. Fetch Live Bus Location and User Home Location to make a dynamic, more accurate prediction
+    const liveBus = await LiveBusLocation.findOne({ driverId: activeTrip.driverId._id });
+    const user = await User.findById(userId, 'homeLocation');
+
+    // 3. Recalculate ETA dynamically based on CURRENT bus location and CURRENT time
+    if (liveBus && liveBus.location && user && user.homeLocation && user.homeLocation.lat) {
+      const currentTime = new Date();
+      const dynamicPred = calculatePrediction(
+        liveBus.location.lat, 
+        liveBus.location.lng, 
+        user.homeLocation.lat, 
+        user.homeLocation.lng, 
+        currentTime
+      );
+      
+      distanceMeters = dynamicPred.distance;
+      durationSeconds = dynamicPred.duration;
+      predictedArrivalTimeObj = dynamicPred.predictedTime;
+
+      // Update the trip database with the new prediction for consistency
+      await Trip.updateOne(
+        { _id: activeTrip._id, 'predictions.userId': userId },
+        {
+          $set: {
+            'predictions.$.distance': distanceMeters,
+            'predictions.$.duration': durationSeconds,
+            'predictions.$.predictedArrivalTime': predictedArrivalTimeObj
+          }
+        }
+      );
+    }
 
     // 1. Format Distance
-    const distanceFormatted = userPred.distance < 1000
-      ? `${userPred.distance} m`
-      : `${(userPred.distance / 1000).toFixed(1)} Km`;
+    const distanceFormatted = distanceMeters < 1000
+      ? `${distanceMeters} m`
+      : `${(distanceMeters / 1000).toFixed(1)} Km`;
 
     // 2. Format Duration
     let durationFormatted = "";
-    if (userPred.duration < 60) {
-      durationFormatted = `${userPred.duration} sec`;
+    if (durationSeconds < 60) {
+      durationFormatted = `${durationSeconds} sec`;
     } else {
-      const mins = Math.floor(userPred.duration / 60);
-      const secs = userPred.duration % 60;
+      const mins = Math.floor(durationSeconds / 60);
+      const secs = Math.round(durationSeconds % 60);
       durationFormatted = secs > 0 ? `${mins} min ${secs} sec` : `${mins} min`;
     }
 
     // 3. Format Time to Local String (e.g., "14:25 PM")
-    const arrivalTime = new Date(userPred.predictedArrivalTime);
-    const timeFormatted = arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    const timeFormatted = predictedArrivalTimeObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
 
     res.status(200).json({
       status: 'ACTIVE',
       driver: activeTrip.driverId.name,
       predictedArrivalTime: timeFormatted,
-      arrivalTimeISO: userPred.predictedArrivalTime, // Keep ISO for potential frontend usage
+      arrivalTimeISO: predictedArrivalTimeObj, // Keep ISO for potential frontend usage
       distance: distanceFormatted,
       duration: durationFormatted
     });
