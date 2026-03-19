@@ -53,7 +53,7 @@ exports.markAttendance = async (req, res) => {
       // 3. Define Allowed Radius (0.1 KM = 100 Meters)
       // You can also use institute.geofenceRadius if you want it dynamic, 
       // but you specifically asked for 100m here.
-      const ALLOWED_RADIUS_KM = 0.1; 
+      const ALLOWED_RADIUS_KM = 0.5; 
 
       if (distanceInKm <= ALLOWED_RADIUS_KM) {
         // SUCCESS: User is inside 100m
