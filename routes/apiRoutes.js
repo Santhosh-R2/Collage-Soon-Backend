@@ -18,6 +18,7 @@ router.post('/admin/set-location', adminCtrl.setInstituteLocation);
 router.get('/admin/institute/:adminId', adminCtrl.getInstituteByAdmin);
 router.post('/admin/broadcast', adminCtrl.sendBroadcast);
 router.get('/admin/broadcasts', adminCtrl.getAllBroadcasts);
+router.get('/profile/:id', authCtrl.getProfile);
 
 // --- ACADEMIC ---
 router.get('/teachers', acadCtrl.getTeachers);
