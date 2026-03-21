@@ -42,6 +42,17 @@ function calculatePrediction(startLat, startLng, destLat, destLng, startTime) {
     duration: finalDurationSeconds 
   };
 }
+// Helper: Get Current Date/Time in IST (UTC + 5:30)
+function getISTNow() {
+  const now = new Date();
+  return new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+}
+
+// Helper: Get Today's Date String in IST "YYYY-MM-DD"
+function getISTToday() {
+  return getISTNow().toISOString().split('T')[0];
+}
+
 // 1. Initialize Bus (Driver creates their bus profile)
 exports.initBus = async (req, res) => {
   try {
@@ -145,7 +156,7 @@ exports.getMyPassengers = async (req, res) => {
 exports.setDailyStatus = async (req, res) => {
   try {
     const { userId, status, driverId } = req.body;
-    const today = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
+    const today = getISTToday(); 
 
     // 1. Check if a record ALREADY exists for today
     const existingRecord = await BusAttendance.findOne({ userId, date: today });
@@ -173,8 +184,8 @@ exports.setDailyStatus = async (req, res) => {
 exports.startTrip = async (req, res) => {
   try {
     const { driverId, lat, lng } = req.body;
-    const today = new Date().toISOString().split('T')[0];
-    const startTime = new Date(); // Explicitly use exact current execution time
+    const today = getISTToday();
+    const startTime = getISTNow(); 
 
     // 1. Create or Reset Live Location Entry
     await LiveBusLocation.findOneAndUpdate(
@@ -221,11 +232,23 @@ exports.startTrip = async (req, res) => {
       );
     }
 
+    // 3. Format startTime for human-readable response (IST)
+    const formattedStart = startTime.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'Asia/Kolkata'
+    });
+
     // Notify via Socket
     const io = req.app.get('socketio');
     io.to(`trip-${driverId}`).emit('trip-status', { status: 'STARTED', message: 'Bus has left.' });
 
-    res.status(200).json({ message: "Trip Started. Arrival predictions ready.", startTime });
+    res.status(200).json({ 
+      message: "Trip Started. Arrival predictions ready.", 
+      startTime: formattedStart,
+      startTimeISO: startTime 
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -298,8 +321,13 @@ exports.getUserPrediction = async (req, res) => {
       durationFormatted = secs > 0 ? `${mins} min ${secs} sec` : `${mins} min`;
     }
 
-    // 3. Format Time to Local String (e.g., "14:25 PM")
-    const timeFormatted = predictedArrivalTimeObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    // 3. Format Time to Local String (IST)
+    const timeFormatted = predictedArrivalTimeObj.toLocaleTimeString('en-IN', { 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      hour12: true,
+      timeZone: 'Asia/Kolkata' 
+    });
 
     res.status(200).json({
       status: 'ACTIVE',
@@ -363,7 +391,7 @@ exports.getLiveLocation = async (req, res) => {
 exports.getRoute = async (req, res) => {
   try {
     const { driverId } = req.query;
-    const today = new Date().toISOString().split('T')[0];
+    const today = getISTToday();
 
     const institute = await Institute.findOne();
     if (!institute) return res.status(400).json({ message: "Institute location missing" });
@@ -429,7 +457,7 @@ exports.toggleTrip = async (req, res) => {
 exports.getComingUsers = async (req, res) => {
   try {
     const { driverId } = req.query;
-    const today = new Date().toISOString().split('T')[0];
+    const today = getISTToday();
 
     let userIdsToFetch = [];
 
