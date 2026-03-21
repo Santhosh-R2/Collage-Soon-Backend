@@ -19,15 +19,28 @@ function getDistance(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
-// Prediction Logic: Simple ETA based on Distance and Avg Speed (e.g., 30 km/h)
+// Prediction Logic: Refined ETA based on Road Distance and Realistic Speed
 function calculatePrediction(startLat, startLng, destLat, destLng, startTime) {
-  const distance = getDistance(startLat, startLng, destLat, destLng);
-  const avgSpeed = 30; // km/h
-  const durationHours = distance / avgSpeed;
+  const straightLineDist = getDistance(startLat, startLng, destLat, destLng);
+  
+  // 1. Road Bend Factor: Most roads are ~30% longer than straight lines
+  const estimatedRoadDist = straightLineDist * 1.3; 
+  
+  // 2. Realistic Speed: 35 km/h is a better average for a bus with stops
+  const avgSpeed = 35; 
+  
+  const durationHours = estimatedRoadDist / avgSpeed;
   const durationSeconds = Math.round(durationHours * 3600);
 
-  const predictedTime = new Date(startTime.getTime() + durationSeconds * 1000);
-  return { predictedTime, distance: Math.round(distance * 1000), duration: durationSeconds };
+  // 3. Stop/Traffic Buffer: Add 5 minutes (300s) flat overhead for operational delays
+  const finalDurationSeconds = durationSeconds + 300; 
+
+  const predictedTime = new Date(startTime.getTime() + finalDurationSeconds * 1000);
+  return { 
+    predictedTime, 
+    distance: Math.round(estimatedRoadDist * 1000), 
+    duration: finalDurationSeconds 
+  };
 }
 // 1. Initialize Bus (Driver creates their bus profile)
 exports.initBus = async (req, res) => {
@@ -161,7 +174,7 @@ exports.startTrip = async (req, res) => {
   try {
     const { driverId, lat, lng } = req.body;
     const today = new Date().toISOString().split('T')[0];
-    const startTime = new Date();
+    const startTime = new Date(); // Explicitly use exact current execution time
 
     // 1. Create or Reset Live Location Entry
     await LiveBusLocation.findOneAndUpdate(

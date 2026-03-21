@@ -2,6 +2,8 @@ const User = require('../models/User');
 const Institute = require('../models/Institute');
 const Broadcast = require('../models/Broadcast');
 const SOSAlert = require('../models/SOSAlert');
+const ExamSchedule = require('../models/ExamSchedule');
+const Assignment = require('../models/Assignment');
 const emailService = require('../utils/emailService');
 // Set Institute Location
 exports.setInstituteLocation = async (req, res) => {
@@ -115,6 +117,19 @@ exports.getInstituteByAdmin = async (req, res) => {
   }
 };
 
+// Get Active Institute (Most recently updated)
+exports.getActiveInstitute = async (req, res) => {
+  try {
+    const institute = await Institute.findOne().sort({ lastUpdated: -1 });
+    if (!institute) {
+      return res.status(404).json({ message: "No Institute location defined yet" });
+    }
+    res.status(200).json(institute);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 // Get All Broadcasts (Admin Dashboard)
 exports.getAllBroadcasts = async (req, res) => {
   try {
@@ -128,7 +143,16 @@ exports.getAllBroadcasts = async (req, res) => {
       .populate('driverId', 'name role')
       .sort({ createdAt: -1 });
 
-    // 3. Format into a unified structure
+    // 3. Fetch all Exams and Assignments (Teacher Broadcasts)
+    const exams = await ExamSchedule.find()
+      .populate('teacherId', 'name role')
+      .sort({ createdAt: -1 });
+
+    const assignments = await Assignment.find()
+      .populate('teacherId', 'name role')
+      .sort({ createdAt: -1 });
+
+    // 4. Format into a unified structure
     const formattedBroadcasts = broadcasts.map(b => {
       // If senderId is missing or unpopulated, default to admin
       const role = b.senderId && b.senderId.role ? b.senderId.role.toLowerCase() : 'admin';
@@ -161,8 +185,46 @@ exports.getAllBroadcasts = async (req, res) => {
       };
     });
 
-    // 4. Merge and sort by date descending
-    const allMessages = [...formattedBroadcasts, ...formattedSOS].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const formattedExams = exams.map(e => {
+      const name = e.teacherId && e.teacherId.name ? e.teacherId.name : 'Faculty';
+      const examList = e.exams.map(ex => `${ex.subject} (${ex.date})`).join(', ');
+
+      return {
+        _id: e._id,
+        type: 'Exam',
+        senderName: name,
+        senderRole: 'teacher',
+        title: `Exam Schedule: ${e.semester}`,
+        message: `New exam schedule posted for ${e.semester}: ${examList}`,
+        targetAudience: 'students',
+        createdAt: e.createdAt,
+        senderId: e.teacherId?._id // For frontend filtering
+      };
+    });
+
+    const formattedAssignments = assignments.map(a => {
+      const name = a.teacherId && a.teacherId.name ? a.teacherId.name : 'Faculty';
+
+      return {
+        _id: a._id,
+        type: 'Assignment',
+        senderName: name,
+        senderRole: 'teacher',
+        title: `Assignment: ${a.topic}`,
+        message: `New assignment on ${a.topic}. Due Date: ${a.submissionDate}. Description: ${a.description}`,
+        targetAudience: 'students',
+        createdAt: a.createdAt,
+        senderId: a.teacherId?._id // For frontend filtering
+      };
+    });
+
+    // 5. Merge and sort by date descending
+    const allMessages = [
+      ...formattedBroadcasts, 
+      ...formattedSOS, 
+      ...formattedExams, 
+      ...formattedAssignments
+    ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     res.status(200).json(allMessages);
   } catch (error) {
@@ -179,11 +241,43 @@ exports.deleteBroadcastLog = async (req, res) => {
       await Broadcast.findByIdAndDelete(id);
     } else if (type === 'SOS') {
       await SOSAlert.findByIdAndDelete(id);
+    } else if (type === 'Exam') {
+      await ExamSchedule.findByIdAndDelete(id);
+    } else if (type === 'Assignment') {
+        await Assignment.findByIdAndDelete(id);
     } else {
       return res.status(400).json({ message: "Invalid log type" });
     }
 
     res.status(200).json({ message: "Log deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Get Single Broadcast Detail
+exports.getBroadcastDetail = async (req, res) => {
+  try {
+    const { id, type } = req.params;
+
+    let result;
+    if (type === 'General') {
+      result = await Broadcast.findById(id).populate('senderId', 'name role');
+    } else if (type === 'SOS') {
+      result = await SOSAlert.findById(id).populate('driverId', 'name role');
+    } else if (type === 'Exam') {
+      result = await ExamSchedule.findById(id).populate('teacherId', 'name role');
+    } else if (type === 'Assignment') {
+      result = await Assignment.findById(id).populate('teacherId', 'name role');
+    } else {
+      return res.status(400).json({ message: "Invalid type" });
+    }
+
+    if (!result) {
+      return res.status(404).json({ message: "Entry not found" });
+    }
+
+    res.status(200).json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

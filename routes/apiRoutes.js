@@ -15,6 +15,7 @@ router.get('/admin/pending', authCtrl.getPendingUsers);
 router.post('/admin/approve', authCtrl.approveUser);
 router.post('/admin/reject', authCtrl.rejectUser);
 router.post('/admin/set-location', adminCtrl.setInstituteLocation);
+router.get('/admin/institute/active', adminCtrl.getActiveInstitute);
 router.get('/admin/institute/:adminId', adminCtrl.getInstituteByAdmin);
 router.post('/admin/broadcast', adminCtrl.sendBroadcast);
 router.get('/admin/broadcasts', adminCtrl.getAllBroadcasts);
@@ -88,8 +89,9 @@ router.get('/view/non-faculty', (req, res) => {
     authCtrl.getUsersByRole(req, res);
 });
 
-// --- ADMIN: LOG DELETION ---
+// --- ADMIN: LOG DELETION & DETAILS ---
 router.delete('/admin/broadcast/:id/:type', adminCtrl.deleteBroadcastLog);
+router.get('/admin/broadcast/:id/:type', adminCtrl.getBroadcastDetail);
 
 
 
