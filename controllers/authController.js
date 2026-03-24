@@ -147,10 +147,28 @@ exports.getUsersByRole = async (req, res) => {
     .select('-password') // Don't send passwords
     .sort({ name: 1 });   // Sort alphabetically
 
+    // 3. Process attendance status for users
+    const today = new Date().toISOString().split('T')[0];
+    const processedUsers = users.map(user => {
+      const userObj = user.toObject();
+      
+      // If attendance is NOT from today, show as absent in the UI response
+      if (userObj.campusAttendance && userObj.campusAttendance.date !== today) {
+        userObj.campusAttendance.status = 'absent';
+      }
+      
+      // If no attendance record at all, ensure it shows absent
+      if (!userObj.campusAttendance) {
+        userObj.campusAttendance = { status: 'absent', date: today };
+      }
+      
+      return userObj;
+    });
+
     res.status(200).json({
       count: users.length,
       role: role,
-      users: users
+      users: processedUsers
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

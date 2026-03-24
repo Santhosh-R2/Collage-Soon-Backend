@@ -12,13 +12,33 @@ const getStudentEmails = async (teacherId) => {
 // Get All Teachers
 exports.getTeachers = async (req, res) => {
   try {
+    const today = new Date().toISOString().split('T')[0];
     const teachers = await User.find({ role: 'teacher', isApproved: true })
       .populate({
         path: 'assignedStudents',
-        select: '-password' // Fetches all student fields EXCEPT the password
+        select: '-password'
       });
 
-    res.status(200).json(teachers);
+    // Process attendance status for students
+    const processedTeachers = teachers.map(teacher => {
+      const teacherObj = teacher.toObject();
+      if (teacherObj.assignedStudents) {
+        teacherObj.assignedStudents = teacherObj.assignedStudents.map(student => {
+          // If attendance is NOT from today, show as absent
+          if (student.campusAttendance && student.campusAttendance.date !== today) {
+            student.campusAttendance.status = 'absent';
+          }
+          // If no attendance record at all, ensure it shows absent
+          if (!student.campusAttendance) {
+            student.campusAttendance = { status: 'absent', date: today };
+          }
+          return student;
+        });
+      }
+      return teacherObj;
+    });
+
+    res.status(200).json(processedTeachers);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -117,21 +137,32 @@ exports.getStudentRequests = async (req, res) => {
 };
 exports.getMyClassList = async (req, res) => {
   try {
-    // FIX: Check both Query String (URL) AND Request Body (JSON)
+    const today = new Date().toISOString().split('T')[0];
     const teacherId = req.query.teacherId || req.body.teacherId;
 
     if (!teacherId) {
       return res.status(400).json({ message: "Teacher ID is required" });
     }
 
-    // Find teacher and populate the student details
     const teacher = await User.findById(teacherId).populate('assignedStudents', 'name email homeLocation campusAttendance');
 
     if (!teacher) {
       return res.status(404).json({ message: "Teacher not found" });
     }
 
-    res.status(200).json(teacher.assignedStudents);
+    // Process attendance status for students
+    const processedStudents = teacher.assignedStudents.map(student => {
+      const studentObj = student.toObject();
+      if (studentObj.campusAttendance && studentObj.campusAttendance.date !== today) {
+        studentObj.campusAttendance.status = 'absent';
+      }
+      if (!studentObj.campusAttendance) {
+        studentObj.campusAttendance = { status: 'absent', date: today };
+      }
+      return studentObj;
+    });
+
+    res.status(200).json(processedStudents);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

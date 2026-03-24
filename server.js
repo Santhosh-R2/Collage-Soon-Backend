@@ -6,8 +6,8 @@ const { Server } = require("socket.io");
 const connectDB = require('./config/db');
 const apiRoutes = require('./routes/apiRoutes');
 const LiveBusLocation = require('./models/LiveBusLocation');
+const initAttendanceCron = require('./utils/attendanceCron');
 
-connectDB();
 
 const app = express();
 const server = http.createServer(app);
@@ -99,12 +99,17 @@ io.on('connection', (socket) => {
   });
 });
 
-const PORT = process.env.PORT || 5000;
+// Start Server Logic
+const startApp = async () => {
+  await connectDB();
+  initAttendanceCron();
 
-// Vercel Serverless: Export the app
-// Local Development: Listen on port
-if (require.main === module) {
-  server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
-}
+  const PORT = process.env.PORT || 5000;
+  if (require.main === module) {
+    server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+  }
+};
+
+startApp();
 
 module.exports = app;
