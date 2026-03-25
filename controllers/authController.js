@@ -1,5 +1,15 @@
 const User = require('../models/User');
 
+// Helper to get today's date in IST (YYYY-MM-DD)
+const getTodayIST = () => {
+    return new Intl.DateTimeFormat('en-CA', { 
+        timeZone: 'Asia/Kolkata', 
+        year: 'numeric', 
+        month: '2-digit', 
+        day: '2-digit' 
+    }).format(new Date());
+};
+
 // Register
 exports.register = async (req, res) => {
   try {
@@ -148,7 +158,7 @@ exports.getUsersByRole = async (req, res) => {
     .sort({ name: 1 });   // Sort alphabetically
 
     // 3. Process attendance status for users
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayIST();
     const processedUsers = users.map(user => {
       const userObj = user.toObject();
       

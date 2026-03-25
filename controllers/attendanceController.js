@@ -2,6 +2,16 @@ const User = require('../models/User');
 const Institute = require('../models/Institute');
 const AttendanceRecord = require('../models/AttendanceRecord'); // <--- Import New Model
 
+// Helper to get today's date in IST (YYYY-MM-DD)
+const getTodayIST = () => {
+    return new Intl.DateTimeFormat('en-CA', { 
+        timeZone: 'Asia/Kolkata', 
+        year: 'numeric', 
+        month: '2-digit', 
+        day: '2-digit' 
+    }).format(new Date());
+};
+
 // Helper: Distance Calculator
 function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
   var R = 6371; 
@@ -21,7 +31,7 @@ exports.markAttendance = async (req, res) => {
   try {
     const { userId, lat, lng, status } = req.body; 
     const attendanceStatus = status || 'present'; 
-    const today = new Date().toISOString().split('T')[0]; 
+    const today = getTodayIST(); 
 
     // Check Duplicate
     const existingRecord = await AttendanceRecord.findOne({ userId, date: today });
@@ -117,7 +127,7 @@ exports.getLiveClassAttendance = async (req, res) => {
     }
 
     // 1. Get today's date string "YYYY-MM-DD"
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayIST();
 
     // 2. Find all students assigned to this teacher
     const students = await User.find({ 
@@ -159,7 +169,7 @@ exports.getLiveClassAttendance = async (req, res) => {
 exports.getTodayAttendanceByRole = async (req, res) => {
   try {
     const { role } = req.params;
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayIST();
 
     // Find all attendance records for today
     const records = await AttendanceRecord.find({ 

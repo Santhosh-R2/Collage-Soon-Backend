@@ -5,6 +5,16 @@ const StudentResult = require('../models/StudentResult');
 const Assignment = require('../models/Assignment');
 const emailService = require('../utils/emailService');
 
+// Helper to get today's date in IST (YYYY-MM-DD)
+const getTodayIST = () => {
+    return new Intl.DateTimeFormat('en-CA', { 
+        timeZone: 'Asia/Kolkata', 
+        year: 'numeric', 
+        month: '2-digit', 
+        day: '2-digit' 
+    }).format(new Date());
+};
+
 const getStudentEmails = async (teacherId) => {
   const students = await User.find({ classTeacherId: teacherId, isApproved: true }, 'email');
   return students.map(s => s.email).filter(e => e);
@@ -12,7 +22,7 @@ const getStudentEmails = async (teacherId) => {
 // Get All Teachers
 exports.getTeachers = async (req, res) => {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayIST();
     const teachers = await User.find({ role: 'teacher', isApproved: true })
       .populate({
         path: 'assignedStudents',
@@ -137,7 +147,7 @@ exports.getStudentRequests = async (req, res) => {
 };
 exports.getMyClassList = async (req, res) => {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayIST();
     const teacherId = req.query.teacherId || req.body.teacherId;
 
     if (!teacherId) {

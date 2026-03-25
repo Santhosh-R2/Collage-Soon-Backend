@@ -6,7 +6,7 @@ const { Server } = require("socket.io");
 const connectDB = require('./config/db');
 const apiRoutes = require('./routes/apiRoutes');
 const LiveBusLocation = require('./models/LiveBusLocation');
-const initAttendanceCron = require('./utils/attendanceCron');
+const { initAttendanceCron } = require('./utils/attendanceCron');
 
 
 const app = express();

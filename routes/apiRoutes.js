@@ -42,6 +42,7 @@ router.post('/attendance/mark', attendCtrl.markAttendance);
 router.get('/attendance/history', attendCtrl.getAttendanceHistory);
 router.get('/attendance/live-class', attendCtrl.getLiveClassAttendance);
 router.get('/attendance/today/:role', attendCtrl.getTodayAttendanceByRole);
+router.get('/attendance/trigger-cron', attendCtrl.triggerAttendanceCron);
 // --- BUS MANAGEMENT (Updated) ---
 router.post('/bus/start-trip', busCtrl.startTrip);
 router.post('/bus/end-trip', busCtrl.endTrip);
