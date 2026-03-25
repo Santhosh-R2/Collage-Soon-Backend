@@ -196,3 +196,17 @@ exports.getTodayAttendanceByRole = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+const { runManualAttendanceCheck } = require('../utils/attendanceCron');
+
+exports.triggerAttendanceCron = async (req, res) => {
+  try {
+    const count = await runManualAttendanceCheck();
+    res.status(200).json({ 
+      status: 'Success', 
+      message: `Manual cron triggered. Auto-marked ${count} unrecorded users as absent for today.` 
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
