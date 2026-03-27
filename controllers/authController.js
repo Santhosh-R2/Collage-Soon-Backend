@@ -207,3 +207,20 @@ exports.getProfile = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// Delete User (Admin Only)
+exports.deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Find the user by ID and completely remove from the database
+    const deletedUser = await User.findByIdAndDelete(id);
+    if (!deletedUser) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    res.status(200).json({ message: "User permanently deleted." });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

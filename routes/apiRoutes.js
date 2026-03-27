@@ -14,6 +14,7 @@ router.post('/admin/login', authCtrl.defaultAdminLogin);
 router.get('/admin/pending', authCtrl.getPendingUsers);
 router.post('/admin/approve', authCtrl.approveUser);
 router.post('/admin/reject', authCtrl.rejectUser);
+router.delete('/admin/user/:id', authCtrl.deleteUser);
 router.post('/admin/set-location', adminCtrl.setInstituteLocation);
 router.get('/admin/institute/active', adminCtrl.getActiveInstitute);
 router.get('/admin/institute/:adminId', adminCtrl.getInstituteByAdmin);
