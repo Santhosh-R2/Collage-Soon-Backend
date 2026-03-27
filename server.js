@@ -6,7 +6,7 @@ const { Server } = require("socket.io");
 const connectDB = require('./config/db');
 const apiRoutes = require('./routes/apiRoutes');
 const LiveBusLocation = require('./models/LiveBusLocation');
-const { initAttendanceCron } = require('./utils/attendanceCron');
+const { initAttendanceCron, runSystemCatchup } = require('./utils/attendanceCron');
 
 
 const app = express();
@@ -103,6 +103,7 @@ io.on('connection', (socket) => {
 const startApp = async () => {
   await connectDB();
   initAttendanceCron();
+  runSystemCatchup();
 
   const PORT = process.env.PORT || 5000;
   if (require.main === module) {
