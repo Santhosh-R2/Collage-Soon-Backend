@@ -1,4 +1,6 @@
 const User = require('../models/User');
+const emailService = require('../utils/emailService');
+const bcrypt = require('bcryptjs');
 
 // Helper to get today's date in IST (YYYY-MM-DD)
 const getTodayIST = () => {
@@ -220,6 +222,87 @@ exports.deleteUser = async (req, res) => {
     }
 
     res.status(200).json({ message: "User permanently deleted." });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// --- FORGOT PASSWORD FLOW ---
+
+// 1. Forgot Password (Send OTP)
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: "User with this email does not exist." });
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Set expiry (10 minutes)
+    user.resetPasswordOTP = otp;
+    user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
+
+    await user.save();
+
+    // Send email using emailService
+    await emailService.sendOTPEmail(email, otp);
+
+    res.status(200).json({ message: "OTP sent to your email." });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// 2. Verify OTP
+exports.verifyOTP = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    const user = await User.findOne({ 
+      email, 
+      resetPasswordOTP: otp,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired OTP." });
+    }
+
+    res.status(200).json({ message: "OTP verified successfully. You can now reset your password." });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// 3. Reset Password
+exports.resetPassword = async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    // Verify OTP again (for security)
+    const user = await User.findOne({ 
+      email, 
+      resetPasswordOTP: otp,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired OTP session." });
+    }
+
+    // Update password (User model's pre-save middleware will hash it)
+    user.password = newPassword;
+    
+    // Clear OTP fields
+    user.resetPasswordOTP = undefined;
+    user.resetPasswordExpires = undefined;
+
+    await user.save();
+
+    res.status(200).json({ message: "Password reset successful. You can now login with your new password." });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

@@ -111,5 +111,17 @@ module.exports = {
     `, true);
     return await sendEmail(emails, `🚨 URGENT: Emergency SOS on Bus`, html);
   },
+  sendOTPEmail: async (email, otp) => {
+    const html = getHtmlTemplate('Password Reset OTP', `
+      <div style="text-align: center; padding: 20px;">
+        <p>You have requested to reset your password. Please use the following 6-digit OTP to proceed:</p>
+        <div style="font-size: 32px; font-weight: bold; color: #6366f1; letter-spacing: 5px; margin: 20px 0; padding: 15px; background: #f0f4ff; border-radius: 8px; display: inline-block;">
+          ${otp}
+        </div>
+        <p style="color: #666; font-size: 14px;">This OTP is valid for <strong>10 minutes</strong>. If you did not request this, please ignore this email.</p>
+      </div>
+    `);
+    return await sendEmail(email, '🔑 Password Reset OTP', html);
+  },
   sendGenericEmail: sendEmail
 };

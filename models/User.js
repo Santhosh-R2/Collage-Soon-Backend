@@ -24,7 +24,11 @@ const userSchema = new mongoose.Schema({
   },
 
   // ❌ REMOVED busStatus from here
-  busDriverId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+  busDriverId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+
+  // Password Reset Fields
+  resetPasswordOTP: { type: String },
+  resetPasswordExpires: { type: Date }
 });
 
 // Hash password before saving

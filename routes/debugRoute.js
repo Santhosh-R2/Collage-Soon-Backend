@@ -2,8 +2,6 @@ const express = require('express');
 const router = express.Router();
 const nodemailer = require('nodemailer');
 
-// GET /api/debug-env
-// Checks environment variables and connections
 router.get('/debug-env', async (req, res) => {
     const debugInfo = {
         environment: {
@@ -27,7 +25,6 @@ router.get('/debug-env', async (req, res) => {
     try {
         debugInfo.smtpTest.attempted = true;
 
-        // 1. Create Transporter with explicit settings
         const transporter = nodemailer.createTransport({
             host: 'smtp.gmail.com',
             port: 465,
@@ -36,11 +33,10 @@ router.get('/debug-env', async (req, res) => {
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASS,
             },
-            logger: true, // Log to console
+            logger: true, 
             debug: true   // Include debug info
         });
 
-        // 2. Verify Connection
         await transporter.verify();
         debugInfo.smtpTest.connectionVerified = true;
 
