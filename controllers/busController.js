@@ -362,6 +362,41 @@ exports.endTrip = async (req, res) => {
   }
 };
 
+exports.updateLocation = async (req, res) => {
+  try {
+    const { driverId, lat, lng, speed, heading } = req.body;
+    const lastUpdated = new Date();
+
+    // 1. Update Live Location in Database
+    const liveData = await LiveBusLocation.findOneAndUpdate(
+      { driverId },
+      { 
+        location: { lat, lng, speed: speed || 0, heading: heading || 0 },
+        lastUpdated 
+      },
+      { upsert: true, new: true }
+    );
+
+    // 2. Broadcast to all clients (Students, Teachers, Admin)
+    const io = req.app.get('socketio');
+    if (io) {
+      // Broadcast specifically to the trip room and generally
+      const updateData = {
+        driverId,
+        location: { lat, lng, speed, heading },
+        lastUpdated
+      };
+      
+      io.to(`trip-${driverId}`).emit('bus-location-updated', updateData);
+      io.emit('all-bus-locations', updateData); // For Admin/Teacher multi-bus view
+    }
+
+    res.status(200).json({ message: "Location updated", data: liveData });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 exports.getLiveLocation = async (req, res) => {
   try {
     const { driverId } = req.query;

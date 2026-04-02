@@ -43,6 +43,7 @@ router.get('/attendance/trigger-cron', attendCtrl.triggerAttendanceCron);
 router.post('/bus/start-trip', busCtrl.startTrip);
 router.post('/bus/end-trip', busCtrl.endTrip);
 router.get('/bus/live-location', busCtrl.getLiveLocation);
+router.post('/bus/update-location', busCtrl.updateLocation);
 router.post('/bus/init', busCtrl.initBus);
 router.get('/bus/details', busCtrl.getBusByDriver);                 
 router.get('/bus/all-users', busCtrl.getAllUsers);         
