@@ -22,24 +22,24 @@ function getDistance(lat1, lon1, lat2, lon2) {
 // Prediction Logic: Refined ETA based on Road Distance and Realistic Speed
 function calculatePrediction(startLat, startLng, destLat, destLng, startTime) {
   const straightLineDist = getDistance(startLat, startLng, destLat, destLng);
-  
+
   // 1. Road Bend Factor: Most roads are ~30% longer than straight lines
-  const estimatedRoadDist = straightLineDist * 1.3; 
-  
+  const estimatedRoadDist = straightLineDist * 1.3;
+
   // 2. Realistic Speed: 35 km/h is a better average for a bus with stops
-  const avgSpeed = 35; 
-  
+  const avgSpeed = 35;
+
   const durationHours = estimatedRoadDist / avgSpeed;
   const durationSeconds = Math.round(durationHours * 3600);
 
   // 3. Stop/Traffic Buffer: Add 5 minutes (300s) flat overhead for operational delays
-  const finalDurationSeconds = durationSeconds + 300; 
+  const finalDurationSeconds = durationSeconds + 300;
 
   const predictedTime = new Date(startTime.getTime() + finalDurationSeconds * 1000);
-  return { 
-    predictedTime, 
-    distance: Math.round(estimatedRoadDist * 1000), 
-    duration: finalDurationSeconds 
+  return {
+    predictedTime,
+    distance: Math.round(estimatedRoadDist * 1000),
+    duration: finalDurationSeconds
   };
 }
 // Helper: Get Current Date/Time in IST (UTC + 5:30)
@@ -156,7 +156,7 @@ exports.getMyPassengers = async (req, res) => {
 exports.setDailyStatus = async (req, res) => {
   try {
     const { userId, status, driverId } = req.body;
-    const today = getISTToday(); 
+    const today = getISTToday();
 
     // 1. Check if a record ALREADY exists for today
     const existingRecord = await BusAttendance.findOne({ userId, date: today });
@@ -185,7 +185,7 @@ exports.startTrip = async (req, res) => {
   try {
     const { driverId, lat, lng } = req.body;
     const today = getISTToday();
-    const startTime = getISTNow(); 
+    const startTime = getISTNow();
 
     // 1. Create or Reset Live Location Entry
     await LiveBusLocation.findOneAndUpdate(
@@ -244,10 +244,10 @@ exports.startTrip = async (req, res) => {
     const io = req.app.get('socketio');
     io.to(`trip-${driverId}`).emit('trip-status', { status: 'STARTED', message: 'Bus has left.' });
 
-    res.status(200).json({ 
-      message: "Trip Started. Arrival predictions ready.", 
+    res.status(200).json({
+      message: "Trip Started. Arrival predictions ready.",
       startTime: formattedStart,
-      startTimeISO: startTime 
+      startTimeISO: startTime
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -282,13 +282,13 @@ exports.getUserPrediction = async (req, res) => {
     if (liveBus && liveBus.location && user && user.homeLocation && user.homeLocation.lat) {
       const currentTime = new Date();
       const dynamicPred = calculatePrediction(
-        liveBus.location.lat, 
-        liveBus.location.lng, 
-        user.homeLocation.lat, 
-        user.homeLocation.lng, 
+        liveBus.location.lat,
+        liveBus.location.lng,
+        user.homeLocation.lat,
+        user.homeLocation.lng,
         currentTime
       );
-      
+
       distanceMeters = dynamicPred.distance;
       durationSeconds = dynamicPred.duration;
       predictedArrivalTimeObj = dynamicPred.predictedTime;
@@ -322,11 +322,11 @@ exports.getUserPrediction = async (req, res) => {
     }
 
     // 3. Format Time to Local String (IST)
-    const timeFormatted = predictedArrivalTimeObj.toLocaleTimeString('en-IN', { 
-      hour: '2-digit', 
-      minute: '2-digit', 
+    const timeFormatted = predictedArrivalTimeObj.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
       hour12: true,
-      timeZone: 'Asia/Kolkata' 
+      timeZone: 'Asia/Kolkata'
     });
 
     res.status(200).json({
@@ -370,9 +370,9 @@ exports.updateLocation = async (req, res) => {
     // 1. Update Live Location in Database
     const liveData = await LiveBusLocation.findOneAndUpdate(
       { driverId },
-      { 
+      {
         location: { lat, lng, speed: speed || 0, heading: heading || 0 },
-        lastUpdated 
+        lastUpdated
       },
       { upsert: true, new: true }
     );
@@ -386,7 +386,7 @@ exports.updateLocation = async (req, res) => {
         location: { lat, lng, speed, heading },
         lastUpdated
       };
-      
+
       io.to(`trip-${driverId}`).emit('bus-location-updated', updateData);
       io.emit('all-bus-locations', updateData); // For Admin/Teacher multi-bus view
     }
