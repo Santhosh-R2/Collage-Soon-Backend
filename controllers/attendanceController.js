@@ -1,8 +1,7 @@
 const User = require('../models/User');
 const Institute = require('../models/Institute');
-const AttendanceRecord = require('../models/AttendanceRecord'); // <--- Import New Model
+const AttendanceRecord = require('../models/AttendanceRecord'); 
 
-// Helper to get today's date in IST (YYYY-MM-DD)
 const getTodayIST = () => {
     return new Intl.DateTimeFormat('en-CA', { 
         timeZone: 'Asia/Kolkata', 
@@ -12,7 +11,6 @@ const getTodayIST = () => {
     }).format(new Date());
 };
 
-// Helper: Distance Calculator
 function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
   var R = 6371; 
   var dLat = deg2rad(lat2 - lat1);
@@ -33,40 +31,31 @@ exports.markAttendance = async (req, res) => {
     const attendanceStatus = status || 'present'; 
     const today = getTodayIST(); 
 
-    // Check Duplicate
     const existingRecord = await AttendanceRecord.findOne({ userId, date: today });
     if (existingRecord) {
       return res.status(400).json({ status: 'Info', message: `Already marked as ${existingRecord.status} today.` });
     }
 
-    // --- ABSENT LOGIC (No GPS check needed) ---
     if (attendanceStatus === 'absent') {
       await AttendanceRecord.create({ userId, date: today, status: 'absent', location: { lat: 0, lng: 0 } });
       await User.findByIdAndUpdate(userId, { campusAttendance: { status: 'absent', date: today } });
       return res.status(200).json({ status: 'Success', message: 'Marked Absent' });
     }
 
-    // --- PRESENT LOGIC (Strict 100m Radius Check) ---
     if (attendanceStatus === 'present') {
       
       if(!lat || !lng) {
         return res.status(400).json({ message: "GPS coordinates required." });
       }
 
-      // 1. Get College Location
       const institute = await Institute.findOne();
       if (!institute) return res.status(400).json({ message: "Institute location not set by Admin." });
 
-      // 2. Calculate Distance (in Kilometers)
       const distanceInKm = getDistanceFromLatLonInKm(lat, lng, institute.location.lat, institute.location.lng);
       
-      // 3. Define Allowed Radius (0.1 KM = 100 Meters)
-      // You can also use institute.geofenceRadius if you want it dynamic, 
-      // but you specifically asked for 100m here.
       const ALLOWED_RADIUS_KM = 0.5; 
 
       if (distanceInKm <= ALLOWED_RADIUS_KM) {
-        // SUCCESS: User is inside 100m
         await AttendanceRecord.create({
           userId,
           date: today,
@@ -81,7 +70,6 @@ exports.markAttendance = async (req, res) => {
         return res.status(200).json({ status: 'Success', message: 'Marked Present (Inside Campus)' });
       
       } else {
-        // FAILURE: User is too far
         const distanceInMeters = (distanceInKm * 1000).toFixed(0);
         return res.status(400).json({ 
           status: 'Failed', 
@@ -95,18 +83,14 @@ exports.markAttendance = async (req, res) => {
   }
 };
 
-// 2. View Attendance History (For Student Profile)
-// 2. View Attendance History
 exports.getAttendanceHistory = async (req, res) => {
   try {
-    // FIX: Check both Query String AND Request Body
     const userId = req.query.userId || req.body.userId;
 
     if (!userId) {
       return res.status(400).json({ message: "User ID is required" });
     }
 
-    // Fetch history
     const history = await AttendanceRecord.find({ userId: userId }).sort({ date: -1 });
 
     res.status(200).json({
@@ -171,7 +155,6 @@ exports.getTodayAttendanceByRole = async (req, res) => {
     const { role } = req.params;
     const today = getTodayIST();
 
-    // Find all attendance records for today
     const records = await AttendanceRecord.find({ 
       date: today,
       status: 'present'
@@ -181,7 +164,6 @@ exports.getTodayAttendanceByRole = async (req, res) => {
       select: 'name email role'
     });
 
-    // Filter out records where userId didn't match the role (populate returns null for mismatch)
     const presentUsers = records
       .filter(r => r.userId !== null)
       .map(r => ({

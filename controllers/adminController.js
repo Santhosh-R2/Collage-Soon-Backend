@@ -5,16 +5,12 @@ const SOSAlert = require('../models/SOSAlert');
 const ExamSchedule = require('../models/ExamSchedule');
 const Assignment = require('../models/Assignment');
 const emailService = require('../utils/emailService');
-// Set Institute Location
 exports.setInstituteLocation = async (req, res) => {
   try {
     const { lat, lng, radius, adminId } = req.body;
 
-    // FILTER by adminId. 
-    // If an institute with this adminId exists -> UPDATE it.
-    // If not -> CREATE it.
     const institute = await Institute.findOneAndUpdate(
-      { adminId: adminId }, // <--- The Change: Look for this specific Admin's institute
+      { adminId: adminId }, 
       {
         location: { lat, lng },
         geofenceRadius: radius || 0.5,
@@ -33,8 +29,6 @@ exports.setInstituteLocation = async (req, res) => {
   }
 };
 
-// Send Broadcast (Admin)
-// Send Broadcast (Admin)
 exports.sendBroadcast = async (req, res) => {
   try {
     const { senderId, title, message, targetAudience } = req.body;
@@ -43,7 +37,6 @@ exports.sendBroadcast = async (req, res) => {
       return res.status(400).json({ message: "All fields are required." });
     }
 
-    // 1. Save to DB
     await Broadcast.create({
       senderId: senderId || "000000000000000000000000",
       title,
@@ -51,7 +44,6 @@ exports.sendBroadcast = async (req, res) => {
       targetAudience
     });
 
-    // 2. Build Query
     let query = { isApproved: true };
     if (targetAudience !== 'all') {
       query.role = targetAudience;
@@ -62,8 +54,6 @@ exports.sendBroadcast = async (req, res) => {
     console.log(emailList);
     console.log(users);
 
-    // 3. Email Sending (UPDATED: Added 'await')
-    // In Vercel, we MUST wait for this to finish, or the connection is cut.
     let emailStatus = "No emails sent";
     if (emailList.length > 0) {
       try {
@@ -76,13 +66,11 @@ exports.sendBroadcast = async (req, res) => {
           emailStatus = "Broadcast triggered, but email delivery status uncertain.";
         }
       } catch (err) {
-        // Log but don't fail the request completely
         console.error("❌ Staff Broadcast Email Error:", err.message);
         emailStatus = `Broadcast recorded, but email failed: ${err.message}`;
       }
     }
 
-    // 4. Socket Emit
     const io = req.app.get('socketio');
     const payload = { title, message, from: 'Admin', date: new Date() };
 
@@ -103,7 +91,7 @@ exports.sendBroadcast = async (req, res) => {
 
 exports.getInstituteByAdmin = async (req, res) => {
   try {
-    const { adminId } = req.params; // Get ID from URL parameter
+    const { adminId } = req.params; 
 
     const institute = await Institute.findOne({ adminId: adminId });
 
@@ -117,7 +105,6 @@ exports.getInstituteByAdmin = async (req, res) => {
   }
 };
 
-// Get Active Institute (Most recently updated)
 exports.getActiveInstitute = async (req, res) => {
   try {
     const institute = await Institute.findOne().sort({ lastUpdated: -1 });
@@ -130,20 +117,14 @@ exports.getActiveInstitute = async (req, res) => {
   }
 };
 
-// Get All Broadcasts (Admin Dashboard)
 exports.getAllBroadcasts = async (req, res) => {
   try {
-    // 1. Fetch all general broadcasts (Admin & Teacher)
     const broadcasts = await Broadcast.find()
       .populate('senderId', 'name role')
       .sort({ createdAt: -1 });
-
-    // 2. Fetch all SOS Alerts (Driver Broadcasts)
     const sosAlerts = await SOSAlert.find()
       .populate('driverId', 'name role')
       .sort({ createdAt: -1 });
-
-    // 3. Fetch all Exams and Assignments (Teacher Broadcasts)
     const exams = await ExamSchedule.find()
       .populate('teacherId', 'name role')
       .sort({ createdAt: -1 });
@@ -152,9 +133,7 @@ exports.getAllBroadcasts = async (req, res) => {
       .populate('teacherId', 'name role')
       .sort({ createdAt: -1 });
 
-    // 4. Format into a unified structure
     const formattedBroadcasts = broadcasts.map(b => {
-      // If senderId is missing or unpopulated, default to admin
       const role = b.senderId && b.senderId.role ? b.senderId.role.toLowerCase() : 'admin';
       const name = b.senderId && b.senderId.name ? b.senderId.name : 'System Admin';
 
@@ -162,7 +141,7 @@ exports.getAllBroadcasts = async (req, res) => {
         _id: b._id,
         type: 'General',
         senderName: name,
-        senderRole: role, // 'admin' or 'teacher'
+        senderRole: role, 
         title: b.title,
         message: b.message,
         targetAudience: b.targetAudience,
@@ -180,7 +159,7 @@ exports.getAllBroadcasts = async (req, res) => {
         senderRole: 'driver',
         title: `EMERGENCY SOS: ${s.reason}`,
         message: `Driver triggered SOS at Location: Lat ${s.location?.lat}, Lng ${s.location?.lng}`,
-        targetAudience: 'admin', // SOS is usually for admins
+        targetAudience: 'admin', 
         createdAt: s.createdAt
       };
     });
@@ -198,7 +177,7 @@ exports.getAllBroadcasts = async (req, res) => {
         message: `New exam schedule posted for ${e.semester}: ${examList}`,
         targetAudience: 'students',
         createdAt: e.createdAt,
-        senderId: e.teacherId?._id // For frontend filtering
+        senderId: e.teacherId?._id 
       };
     });
 
@@ -214,11 +193,9 @@ exports.getAllBroadcasts = async (req, res) => {
         message: `New assignment on ${a.topic}. Due Date: ${a.submissionDate}. Description: ${a.description}`,
         targetAudience: 'students',
         createdAt: a.createdAt,
-        senderId: a.teacherId?._id // For frontend filtering
+        senderId: a.teacherId?._id 
       };
     });
-
-    // 5. Merge and sort by date descending
     const allMessages = [
       ...formattedBroadcasts, 
       ...formattedSOS, 
@@ -232,7 +209,6 @@ exports.getAllBroadcasts = async (req, res) => {
   }
 };
 
-// Delete Broadcast Log (General or SOS)
 exports.deleteBroadcastLog = async (req, res) => {
   try {
     const { id, type } = req.params;
@@ -255,7 +231,6 @@ exports.deleteBroadcastLog = async (req, res) => {
   }
 };
 
-// Get Single Broadcast Detail
 exports.getBroadcastDetail = async (req, res) => {
   try {
     const { id, type } = req.params;
